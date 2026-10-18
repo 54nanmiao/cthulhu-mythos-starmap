@@ -1,0 +1,1336 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>克苏鲁神话 · 星图 | Cthulhu Mythos Star Chart</title>
+<style>
+  :root{
+    --bg:#04050b;
+    --ink:#e8ecff;
+    --ink-2:#9aa4c8;
+    --ink-3:#5d6890;
+    --line:rgba(140,160,255,.14);
+    --glass:rgba(9,11,22,.74);
+    --outer:#b06cff;
+    --old:#26e0c8;
+    --elder:#ffd166;
+    --blood:#ff8fd0;
+    --race:#5b9dff;
+    --human:#ffa94d;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);color:var(--ink);overflow:hidden;
+    font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #sky{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+  #map{position:fixed;inset:0;width:100%;height:100%;z-index:1;cursor:grab;touch-action:none}
+  #map.dragging{cursor:grabbing}
+  #vignette{
+    position:fixed;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%,transparent 44%,rgba(2,3,8,.46) 100%);
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    position:fixed;z-index:20;top:0;left:0;right:0;height:64px;
+    display:flex;align-items:center;gap:18px;padding:0 22px;
+    background:linear-gradient(180deg,rgba(5,6,14,.92),rgba(5,6,14,.45) 70%,transparent);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid rgba(120,140,220,.10);
+  }
+  .brand{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .brand h1{
+    margin:0;font-size:17px;font-weight:600;letter-spacing:.14em;
+    font-family:"Noto Serif SC","Songti SC","SimSun",serif;
+    background:linear-gradient(92deg,#fff,#c8b6ff 45%,#7ce7da);
+    -webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap;
+  }
+  .brand span{font-size:9.5px;letter-spacing:.34em;color:var(--ink-3);white-space:nowrap}
+  .stats{
+    display:flex;gap:14px;align-items:center;font-size:12px;color:var(--ink-2);
+    padding-left:18px;border-left:1px solid var(--line);white-space:nowrap;
+  }
+  .stats b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+  .stats i{font-style:normal;color:var(--ink-3);font-size:11px;margin-left:3px}
+  .grow{flex:1}
+  .search{
+    display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;
+    background:rgba(20,24,44,.6);border:1px solid var(--line);border-radius:9px;
+    min-width:190px;transition:.18s;
+  }
+  .search:focus-within{border-color:rgba(150,120,255,.5);background:rgba(26,30,54,.8)}
+  .search input{
+    background:none;border:0;outline:0;color:var(--ink);font-size:12.5px;width:100%;
+    font-family:inherit;
+  }
+  .search input::placeholder{color:var(--ink-3)}
+  .search .ico{color:var(--ink-3);font-size:13px}
+  .btn{
+    height:34px;padding:0 13px;border-radius:9px;cursor:pointer;font-size:12.5px;
+    color:var(--ink-2);background:rgba(20,24,44,.6);border:1px solid var(--line);
+    font-family:inherit;transition:.18s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn:hover{color:#fff;border-color:rgba(150,120,255,.45);background:rgba(34,38,68,.85)}
+  .btn.on{color:#0b0d16;background:linear-gradient(100deg,#c3a8ff,#8fe6da);border-color:transparent;font-weight:600}
+
+  /* ---------- 图例 ---------- */
+  .legend{
+    position:fixed;z-index:15;left:20px;bottom:20px;width:214px;
+    background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--line);border-radius:14px;padding:13px 13px 9px;
+    box-shadow:0 18px 60px -20px #000;
+  }
+  .legend h4{
+    margin:0 0 10px;font-size:10.5px;letter-spacing:.26em;color:var(--ink-3);font-weight:500;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .legend h4 button{
+    background:none;border:0;color:var(--ink-3);cursor:pointer;font-size:11px;padding:0;
+    font-family:inherit;
+  }
+  .legend h4 button:hover{color:var(--ink)}
+  .fac{
+    display:flex;align-items:center;gap:9px;padding:6px 6px;border-radius:8px;cursor:pointer;
+    transition:.14s;user-select:none;
+  }
+  .fac:hover{background:rgba(255,255,255,.045)}
+  .fac .dot{
+    width:9px;height:9px;border-radius:50%;flex:0 0 auto;
+    box-shadow:0 0 9px currentColor,0 0 2px currentColor;
+  }
+  .fac .nm{font-size:12.5px;color:var(--ink)}
+  .fac .ct{margin-left:auto;font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .fac.off{opacity:.32}
+  .fac.off .nm{text-decoration:line-through}
+  .legend .rule{height:1px;background:var(--line);margin:9px 2px 7px}
+  .ekey{display:flex;align-items:center;gap:9px;padding:3.5px 6px;font-size:11px;color:var(--ink-2)}
+  .ekey i{display:block;width:22px;height:0;border-top:1.5px solid;flex:0 0 auto}
+  .ekey .ec{margin-left:auto;font-style:normal;color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:10.5px}
+
+  /* ---------- 详情面板 ---------- */
+  .panel{
+    position:fixed;z-index:18;top:64px;right:0;bottom:0;width:352px;
+    background:var(--glass);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+    border-left:1px solid var(--line);
+    transform:translateX(102%);transition:transform .38s cubic-bezier(.2,.85,.25,1);
+    display:flex;flex-direction:column;box-shadow:-24px 0 70px -30px #000;
+  }
+  .panel.open{transform:none}
+  .panel-scroll{overflow-y:auto;padding:24px 24px 40px;scrollbar-width:thin}
+  .panel-scroll::-webkit-scrollbar{width:7px}
+  .panel-scroll::-webkit-scrollbar-thumb{background:rgba(120,140,220,.22);border-radius:4px}
+  .p-close{
+    position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:8px;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink-2);
+    font-size:16px;line-height:1;display:grid;place-items:center;font-family:inherit;
+  }
+  .p-close:hover{color:#fff;background:rgba(255,255,255,.1)}
+  .p-fac{
+    display:inline-flex;align-items:center;gap:7px;font-size:10.5px;letter-spacing:.16em;
+    padding:4px 10px;border-radius:99px;border:1px solid currentColor;opacity:.95;
+  }
+  .p-fac .d{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+  .p-name{
+    margin:16px 0 2px;font-size:27px;line-height:1.25;font-weight:600;letter-spacing:.04em;
+    font-family:"Noto Serif SC","Songti SC",serif;
+  }
+  .p-en{font-size:11.5px;letter-spacing:.2em;color:var(--ink-3);text-transform:uppercase}
+  .p-title{
+    margin-top:12px;font-size:12.5px;color:var(--ink-2);line-height:1.6;
+    padding-left:10px;border-left:2px solid rgba(150,120,255,.5);
+  }
+  .p-desc{
+    margin:18px 0 0;font-size:13.4px;line-height:1.95;color:#c9d1ea;text-align:justify;
+  }
+  .p-sub{
+    margin:28px 0 12px;font-size:10.5px;letter-spacing:.26em;color:var(--ink-3);font-weight:500;
+    display:flex;align-items:center;gap:10px;
+  }
+  .p-sub::after{content:"";flex:1;height:1px;background:var(--line)}
+  .rel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .rel li{
+    padding:11px 12px;border-radius:11px;cursor:pointer;
+    background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.05);
+    transition:.16s;
+  }
+  .rel li:hover{background:rgba(255,255,255,.07);border-color:rgba(150,120,255,.3);transform:translateX(2px)}
+  .rel .rh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .rel .rn{font-size:13.5px;font-weight:600;color:#fff}
+  .rel .rt{
+    font-size:10px;padding:1.5px 7px;border-radius:99px;border:1px solid currentColor;
+    letter-spacing:.06em;opacity:.9;
+  }
+  .rel .rd{margin:6px 0 0;font-size:12px;line-height:1.75;color:var(--ink-2)}
+
+  /* ---------- 弹层 ---------- */
+  .modal{
+    position:fixed;inset:0;z-index:40;display:none;place-items:center;padding:5vh 4vw;
+    background:rgba(3,4,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  .modal.open{display:grid}
+  .sheet{
+    width:min(1020px,100%);max-height:90vh;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(13,16,30,.98),rgba(8,10,20,.98));
+    border:1px solid rgba(140,160,255,.18);border-radius:18px;overflow:hidden;
+    box-shadow:0 40px 120px -40px #000;
+  }
+  .sheet header{
+    display:flex;align-items:center;gap:16px;padding:16px 20px;
+    border-bottom:1px solid var(--line);flex:0 0 auto;
+  }
+  .sheet header h2{margin:0;font-size:15px;letter-spacing:.12em;font-weight:600}
+  .tabs{display:flex;gap:4px;background:rgba(255,255,255,.045);padding:3px;border-radius:9px}
+  .tabs button{
+    border:0;background:none;color:var(--ink-2);font-size:12px;padding:6px 14px;border-radius:7px;
+    cursor:pointer;font-family:inherit;transition:.16s;
+  }
+  .tabs button.on{background:rgba(160,130,255,.22);color:#fff}
+  .sheet .x{
+    margin-left:auto;width:30px;height:30px;border-radius:9px;cursor:pointer;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);color:var(--ink-2);font-size:16px;font-family:inherit;
+  }
+  .sheet .x:hover{color:#fff}
+  .sheet-body{overflow-y:auto;padding:18px 20px 28px;scrollbar-width:thin}
+  .sheet-body::-webkit-scrollbar{width:8px}
+  .sheet-body::-webkit-scrollbar-thumb{background:rgba(120,140,220,.22);border-radius:4px}
+  table.reltab{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.reltab th{
+    text-align:left;font-weight:500;font-size:10.5px;letter-spacing:.2em;color:var(--ink-3);
+    padding:6px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;
+    background:#0b0e1c;z-index:1;
+  }
+  table.reltab td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.045);vertical-align:top;line-height:1.6}
+  table.reltab tr:hover td{background:rgba(255,255,255,.03)}
+  table.reltab .pair{white-space:nowrap;font-weight:600;color:#eef1ff;cursor:pointer}
+  table.reltab .pair:hover{color:#c3a8ff}
+  table.reltab .arrow{color:var(--ink-3);font-weight:400;margin:0 6px}
+  table.reltab .desc{color:var(--ink-2);font-size:12px}
+  .badge{
+    display:inline-block;font-size:10px;padding:1.5px 8px;border-radius:99px;
+    border:1px solid currentColor;white-space:nowrap;
+  }
+  .facgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .faccard{
+    border:1px solid var(--line);border-radius:14px;padding:15px 16px;
+    background:rgba(255,255,255,.022);
+  }
+  .faccard .fh{display:flex;align-items:center;gap:9px;margin-bottom:3px}
+  .faccard .fh .dot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 10px currentColor}
+  .faccard .fh b{font-size:14px;letter-spacing:.05em}
+  .faccard .fh span{margin-left:auto;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .faccard .fd{font-size:11.5px;color:var(--ink-2);line-height:1.8;margin:6px 0 12px}
+  .faccard .members{display:flex;flex-wrap:wrap;gap:5px}
+  .faccard .members button{
+    font-size:11.5px;padding:3.5px 9px;border-radius:7px;cursor:pointer;font-family:inherit;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);color:#cfd6ee;
+    transition:.14s;
+  }
+  .faccard .members button:hover{background:rgba(255,255,255,.13);color:#fff}
+
+  .hint{
+    position:fixed;z-index:14;left:50%;bottom:22px;transform:translateX(-50%);
+    font-size:11px;color:var(--ink-3);letter-spacing:.1em;pointer-events:none;
+    white-space:nowrap;transition:opacity .6s;
+  }
+  @media (max-width:900px){
+    .stats{display:none}
+    .legend{display:none}
+    .panel{width:100%}
+    .search{min-width:120px}
+    .brand span{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<svg id="map"></svg>
+<div id="vignette"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>克苏鲁神话 · 星图</h1>
+    <span>CTHULHU MYTHOS STAR CHART</span>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="grow"></div>
+  <label class="search">
+    <span class="ico">⌕</span>
+    <input id="q" type="search" placeholder="搜索存在 / 英文名…" autocomplete="off">
+  </label>
+  <button class="btn" id="btn-fit" title="适应画布">⤢ 适配</button>
+  <button class="btn" id="btn-relayout" title="重新推演布局">✦ 重排</button>
+  <button class="btn" id="btn-table">关系总表</button>
+</header>
+
+<aside class="legend">
+  <h4><span>阵营 / FACTION</span><button id="btn-all">全开</button></h4>
+  <div id="faclist"></div>
+  <div class="rule"></div>
+  <div class="ekey" data-r="kin"><i style="border-color:#7ee787;border-top-style:solid"></i>血缘<b class="ec"></b></div>
+  <div class="ekey" data-r="serve"><i style="border-color:#b06cff;border-top-style:dashed"></i>从属 / 使者<b class="ec"></b></div>
+  <div class="ekey" data-r="created"><i style="border-color:#5b9dff;border-top-style:dotted"></i>造物 / 子嗣<b class="ec"></b></div>
+  <div class="ekey" data-r="worship"><i style="border-color:#ffd166;border-top-style:dashed"></i>崇拜<b class="ec"></b></div>
+  <div class="ekey" data-r="enemy"><i style="border-color:#ff5c7a;border-top-style:dashed"></i>敌对<b class="ec"></b></div>
+  <div class="ekey" data-r="other"><i style="border-color:#7b88ad;border-top-style:dotted"></i>其他关联<b class="ec"></b></div>
+</aside>
+
+<section class="panel" id="panel">
+  <button class="p-close" id="p-close">×</button>
+  <div class="panel-scroll" id="panel-body"></div>
+</section>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <header>
+      <h2 id="sheet-title">关系总表</h2>
+      <div class="tabs">
+        <button class="on" data-tab="rel">关系</button>
+        <button data-tab="fac">阵营</button>
+      </div>
+      <button class="x" id="modal-close">×</button>
+    </header>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<div class="hint" id="hint">拖动节点 · 滚轮缩放 · 点击星辰展开介绍</div>
+
+<script>
+/* =========================================================
+   数据：克苏鲁神话存在与关系
+   f: 阵营  s: 重要度(3/2/1)  t: 称谓  d: 介绍
+   ========================================================= */
+const FACTIONS = [
+  {id:"outer", name:"外神",     en:"Outer Gods",        color:"#b06cff",
+   desc:"宇宙本源层面的存在，无所谓善恶。它们的存在本身，就是对人类理性与空间感的否定。"},
+  {id:"old",   name:"旧日支配者", en:"Great Old Ones",   color:"#26e0c8",
+   desc:"曾统治地球的古老存在，如今多处于沉睡或封印之中，等待星辰归位的那一天。"},
+  {id:"elder", name:"旧神",     en:"Elder Gods",        color:"#ffd166",
+   desc:"与旧日支配者长期对抗的古老神祇，对人类多持中立、漠然或偶尔援手的态度。"},
+  {id:"blood", name:"克苏鲁血系", en:"Bloodline of Cthulhu", color:"#ff8fd0",
+   desc:"克苏鲁的配偶与子嗣，散居于深海、地底与遥远的双星之间。"},
+  {id:"race",  name:"神话种族",  en:"Mythos Races",     color:"#5b9dff",
+   desc:"受外神与旧日支配者驱使、与之敌对、或仅仅与人类共享同一颗星球的非人种族。"},
+  {id:"human", name:"人类与典籍", en:"Mortals & Tomes",  color:"#ffa94d",
+   desc:"被神话卷入的人类：调查员、巫师、艺术家，以及那本本不该被翻开、也不该被翻译的书。"}
+];
+const FAC = Object.fromEntries(FACTIONS.map(f=>[f.id,f]));
+
+const NODES = [
+  /* ---------------- 外神 ---------------- */
+  {id:"azathoth", n:"阿撒托斯", e:"Azathoth", f:"outer", s:3, t:"盲目痴愚之神 · 原初混沌",
+   d:"宇宙的中心与本源，原初混沌的化身。它没有意识，也没有目的，只在无形的王座上吹奏长笛，四周是永不停歇的盲目狂舞。一切存在——包括诸神——或许都只是它无梦之梦里的涟漪。"},
+  {id:"nyarlathotep", n:"奈亚拉托提普", e:"Nyarlathotep", f:"outer", s:3, t:"伏行之混沌 · 千面之神",
+   d:"唯一真正拥有意识与恶意的外神，阿撒托斯的灵魂与使者。它以无数化身行走人间：黑法老、无面者、血舌、肿胀的女人……所到之处必生疯狂与毁灭，而它似乎以此为乐。"},
+  {id:"yog", n:"犹格·索托斯", e:"Yog-Sothoth", f:"outer", s:3, t:"门与钥匙 · 全知全视者",
+   d:"时空连续体本身，与一切时间、一切空间共存。它知晓一切却不关心，既是开启诸门的钥匙，也是门本身。凡人与其接触，往往换来畸形、预言与疯狂三者的混合。"},
+  {id:"shub", n:"莎布·尼古拉丝", e:"Shub-Niggurath", f:"outer", s:3, t:"孕育千万子孙的森之黑山羊",
+   d:"丰饶与腐败并存的母神，其子嗣如林。她既是万物生长的黑暗土壤，也是吞噬一切的母腹。崇拜她的教派遍布地球，仪式多与血肉、生育和森林有关。"},
+  {id:"daoloth", n:"道罗斯", e:"Daoloth", f:"outer", s:1, t:"面纱撕裂者",
+   d:"拉姆齐·坎贝尔笔下的存在，其几何形态不可直视——注视者会看见空间的表皮被一层层撕开。它并无恶意，只是其结构本身足以摧毁人类的感知。"},
+  {id:"abhoth", n:"阿布霍斯", e:"Abhoth", f:"outer", s:1, t:"不净之源",
+   d:"居于地下深处的污秽之源，不断生出畸形、病态的子嗣，又将其重新吞回体内。它是生命繁殖本能的扭曲化身，创生与毁灭在同一处循环。"},
+  {id:"ghroth", n:"格赫罗斯", e:"Ghroth", f:"outer", s:2, t:"报丧之星 · 毁灭先驱",
+   d:"一颗红色的巨星，其歌声是唤醒沉睡者的号角。它游荡于宇宙，用引力与吟唱唤醒旧日支配者，为世界带来终结。"},
+  {id:"tulzscha", n:"图尔兹查", e:"Tulzscha", f:"outer", s:1, t:"绿焰",
+   d:"与克图格亚相呼应的绿色火焰存在，常被描述为环绕舞蹈的绿色光柱，象征某种永恒燃烧、无始无终的宇宙能量。"},
+  {id:"yibb", n:"伊波·兹特尔", e:"Yibb-Tstll", f:"outer", s:1, t:"静默守望者",
+   d:"滴落黑色血液的巨大存在，夜魇以吸食其血为生。它沉默地注视着一切，知晓过去与未来，却从不言语。"},
+  {id:"ubbo", n:"乌波·萨斯拉", e:"Ubbo-Sathla", f:"outer", s:2, t:"无源之源",
+   d:"克拉克·阿什顿·史密斯设定中，地球一切生命的始祖。它是一团无定形的原生质，所有物种都只是从它身上分出的碎片，最终也将回归于它。"},
+  {id:"ngyr", n:"恩格尔·科拉斯", e:"Ngyr-Khorath", f:"outer", s:1, t:"终末之源",
+   d:"位于银河系之外的恐怖存在，与其接触的灵魂会被拖向宇宙的尽头。它是距离与方向本身的一处错误。"},
+  {id:"tawil", n:"塔维尔·亚特·乌姆尔", e:"'Umr at-Tawil", f:"outer", s:2, t:"门前的引路者 · 犹格·索托斯的化身",
+   d:"犹格·索托斯面向凡人的一面：身披灰袍，只露出一只爪。它守在第一道门前，引导以银钥匙穿越终极之门的人，走向那个不该被知道的答案。"},
+
+  /* ---------------- 旧日支配者 ---------------- */
+  {id:"cthulhu", n:"克苏鲁", e:"Cthulhu", f:"old", s:3, t:"拉莱耶之主 · 沉睡之神",
+   d:"1928 年《克苏鲁的呼唤》中登场的巨大沉睡者，居于南太平洋海底的拉莱耶城。它的梦境会渗入敏感者的头脑；当星辰归位、拉莱耶浮出海面，它将号令星之眷族再度主宰世界。"},
+  {id:"hastur", n:"哈斯塔", e:"Hastur", f:"old", s:3, t:"黄衣之王 · 不可命名者",
+   d:"风之存在的领袖，居于毕宿五附近。以「黄衣之王」之名流传于戏剧与艺术，被召唤时会带来疯狂。与克苏鲁互为兄弟或半兄弟，又与克图格亚是宿敌。"},
+  {id:"cthugha", n:"克图格亚", e:"Cthugha", f:"old", s:2, t:"活焰 · 燃烧者",
+   d:"居于北落师门的燃烧星体，纯粹的火与热。它常被召唤来对抗哈斯塔，因为风与火彼此不容。火焰吸血鬼是它的眷族。"},
+  {id:"dagon", n:"达贡", e:"Dagon", f:"old", s:2, t:"父神 · 深潜者之主",
+   d:"腓尼基人崇拜的鱼神，深潜者的父。它居于海沟中的城市，与人类订立契约，以海洋的丰产换取血统的交融。"},
+  {id:"hydra", n:"海德拉", e:"Hydra", f:"old", s:1, t:"母神 · 深潜者之母",
+   d:"达贡的配偶，深潜者的母神。与达贡一同居于海底，孕育千万深潜者。《印斯茅斯的阴影》中的「父神与母神」即指这两位。"},
+  {id:"tsathoggua", n:"扎特瓜", e:"Tsathoggua", f:"old", s:2, t:"恩凯伊的沉睡者 · 蟾之神",
+   d:"克拉克·阿什顿·史密斯创造的神祇，形如生着绒毛的蟾蜍。它沉睡于地下恩凯伊深处的玄武岩宫殿，形态慵懒，却以血肉为食。阿特拉克·纳克亚在其上方织网为邻。"},
+  {id:"ithaqua", n:"伊塔库亚", e:"Ithaqua", f:"old", s:2, t:"风行者 · 温迪戈",
+   d:"雪原上的巨影，奥古斯特·德雷斯设定的旧日支配者。它在暴风雪中游行、掳走旅人，其形象与北美原住民的温迪戈传说融为一体。"},
+  {id:"atlach", n:"阿特拉克·纳克亚", e:"Atlach-Nacha", f:"old", s:2, t:"蜘蛛之神",
+   d:"人面巨蛛，在恩凯伊下界的裂缝上编织连接梦境与现实的巨网。当网织成、与现实连成一线的那一日，世界将迎来终结。"},
+  {id:"yig", n:"伊格", e:"Yig", f:"old", s:1, t:"蛇之父",
+   d:"蛇人的父神，掌管一切蛇类。它通常以巨蛇形象出现，对伤害蛇类者施以绵长的诅咒，但对敬奉者颇为宽和。"},
+  {id:"chaugner", n:"昌格纳·方庚", e:"Chaugnar Faugn", f:"old", s:1, t:"象头之神 · 吸血者",
+   d:"弗兰克·贝尔纳普·朗笔下的旧日支配者，形如背负双手的象头人。它以血为食，可以操控血液流动，被乔朝朝人当作神像一般供奉。"},
+  {id:"nyogtha", n:"尼约格萨", e:"Nyogtha", f:"old", s:1, t:"深渊之物",
+   d:"亨利·库特纳设定中潜藏于地下深处的存在，可借阴影与黑暗移动。它能凝固血液、制造恐怖，是巫师们求取力量的隐秘对象。"},
+  {id:"rhan", n:"兰·提戈斯", e:"Rhan-Tegoth", f:"old", s:1, t:"象牙王座之神",
+   d:"形如多足巨像，以象牙王座为躯。它在冰河时代沉睡，靠吸食人血维持生命，等待被重新唤醒的那一天。"},
+  {id:"aphoom", n:"阿弗姆·扎", e:"Aphoom-Zhah", f:"old", s:1, t:"冷焰",
+   d:"极北之地的寒冷火焰，克图格亚的「兄弟」却与其性质相反：它冻结而非燃烧，所过之处万物凝为冰晶。"},
+  {id:"glaaki", n:"格拉基", e:"Gla'aki", f:"old", s:1, t:"湖中绿光",
+   d:"拉姆齐·坎贝尔设定中藏于英国塞文河谷湖底的绿色陨石生物。它用发光的刺刺入人体、植入仆从，其感染者仍保留人类外表。"},
+  {id:"ygolonac", n:"伊戈罗纳克", e:"Y'golonac", f:"old", s:1, t:"亵渎者",
+   d:"封印于墙中的存在，通过阅读《死灵之书》一类的禁书被解除封印。出现时总是赤裸、臃肿、没有头颅，双掌掌心各生一张嘴。"},
+  {id:"byatis", n:"拜亚提斯", e:"Byatis", f:"old", s:1, t:"蛇发之神",
+   d:"罗伯特·布洛赫设定中封印于塞文河谷的存在，形如巨蟾，长有可伸缩的蛇发。它被镇压在巨石之下，等待血祭将其解除。"},
+  {id:"mnomquah", n:"姆西斯哈", e:"Mnomquah", f:"old", s:1, t:"月之主",
+   d:"居于月球之下的旧日支配者，形如无目的黑色甲壳存在。月球上的一处湖中宫殿被描绘为它的居所。"},
+
+  /* ---------------- 旧神 ---------------- */
+  {id:"nodens", n:"诺登斯", e:"Nodens", f:"elder", s:2, t:"深渊之主 · 大猎手",
+   d:"出自《梦寻秘境卡达斯》，原型是凯尔特神话中的海神。他与奈亚拉托提普敌对，统御夜魇，对人类态度暧昧——既可能施以援手，也可能将人弃于深渊边缘。"},
+  {id:"bast", n:"巴斯特", e:"Bast", f:"elder", s:1, t:"猫之女神",
+   d:"古埃及的猫神，被归入旧神阵营。她守护猫族与梦境，在德雷斯的体系里是旧神的成员，幻梦境中的猫群常被视为她的眷属。"},
+  {id:"kthanid", n:"克塔尼德", e:"Kthanid", f:"elder", s:2, t:"旧神之首 · 克苏鲁的兄弟",
+   d:"布莱恩·拉姆利设定中克苏鲁的兄弟，形貌与克苏鲁一般无二，唯独双眼是金色的、含着仁慈。他是旧神的领袖，封印了克苏鲁等旧日支配者。"},
+  {id:"hypnos", n:"修普诺斯", e:"Hypnos", f:"elder", s:1, t:"睡神",
+   d:"洛夫克拉夫特《休普诺斯》中的学者，凝视睡眠背后的本质。他逐渐失去入睡的能力，最终身体化为某种更纯粹、也更可怕的存在。"},
+  {id:"yad", n:"亚德-萨达格", e:"Yad-Thaddag", f:"elder", s:1, t:"犹格·索托斯的镜像",
+   d:"拉姆利设定中与犹格·索托斯相对应的旧神存在，同样全知全视，却站在旧神一边，象征犹格·索托斯不具恶意的那一面。"},
+
+  /* ---------------- 克苏鲁血系 ---------------- */
+  {id:"ythogtha", n:"伊索格萨", e:"Ythogtha", f:"blood", s:1, t:"克苏鲁之子 · 深渊之眼",
+   d:"林·卡特设定中克苏鲁的子嗣，形如巨眼与触手的结合体，被囚禁于深渊。它的眼睛可能正是「深渊之物」一类传说的源头。"},
+  {id:"zoth", n:"佐斯-奥莫格", e:"Zoth-Ommog", f:"blood", s:1, t:"克苏鲁之子",
+   d:"克苏鲁之子，形如一端呈锥形的巨大触手团。它被囚禁在太平洋海底的亚斯兰废墟之下，由深潜者世代看守。"},
+  {id:"ghatanothoa", n:"吉坦", e:"Ghatanothoa", f:"blood", s:2, t:"姆大陆的暴君",
+   d:"克苏鲁之子，沉睡于姆大陆的火山之下。它的形象一旦被看见，观察者会石化却保留意识，成为永恒的痛苦——比死亡更彻底的囚禁。"},
+  {id:"cthylla", n:"克塔格亚", e:"Cthylla", f:"blood", s:1, t:"克苏鲁之女 · 秘密的克苏鲁",
+   d:"拉姆利设定中克苏鲁的女儿，被称为「秘密的克苏鲁」。若克苏鲁死去，她将成为其复活的关键，因此被深潜者严密守护。"},
+  {id:"kassogtha", n:"卡索格萨", e:"Kassogtha", f:"blood", s:1, t:"克苏鲁之妻",
+   d:"林·卡特设定中克苏鲁的配偶，形如巨大的触手与多目的结合。与伊德·雅一同被视为克苏鲁诸子嗣的母亲。"},
+  {id:"idhyaa", n:"伊德·雅", e:"Idh-Yaa", f:"blood", s:1, t:"克苏鲁的双胞胎",
+   d:"林·卡特设定中克苏鲁的配偶或双胞胎姊妹，来自双子星 Xoth。她与克苏鲁共同产下伊索格萨等子嗣。"},
+
+  /* ---------------- 神话种族 ---------------- */
+  {id:"deepones", n:"深潜者", e:"Deep Ones", f:"race", s:2, t:"印斯茅斯的血亲",
+   d:"半人半鱼的种族，侍奉达贡与海德拉，居住于海底城市伊哈-恩斯雷。它们与人类混血，年长者会「改变」，最终走向海洋。"},
+  {id:"migo", n:"米·戈", e:"Mi-Go", f:"race", s:2, t:"犹格斯真菌",
+   d:"来自犹格斯星的菌类智慧生物，有膜翼与钳状肢体，能把人的大脑取出装进金属筒。它们在喜马拉雅与佛蒙特采矿，为更古老的存在服务。"},
+  {id:"elders", n:"古老者", e:"Elder Things", f:"race", s:2, t:"地球的先驱",
+   d:"来自星海的桶状生翼种族，数亿年前殖民地球，创造了修格斯。它们的南极城市遗迹在《疯狂山脉》中被人类发现。"},
+  {id:"shoggoth", n:"修格斯", e:"Shoggoth", f:"race", s:2, t:"无定形的奴隶",
+   d:"古老者创造的生物机械，由原生质构成，能模仿主人与一切生物。它们最终起来反抗，毁灭了自己的创造者。"},
+  {id:"polyps", n:"飞水螅", e:"Flying Polyps", f:"race", s:1, t:"被封印的仇敌",
+   d:"与古老者争夺地球的敌对种族，形如半透明的锥体，能操控风。它们被古老者封印于地下，等待复仇的时机。"},
+  {id:"colour", n:"星之彩", e:"Colour Out of Space", f:"race", s:2, t:"无名的颜色",
+   d:"陨石带来的、不属于人类光谱的「颜色」，靠汲取生物的生命力生长。它没有形体与意图，却能让土地与生物一同枯萎、畸变。"},
+  {id:"nightgaunt", n:"夜魇", e:"Nightgaunt", f:"race", s:1, t:"无面的仆人",
+   d:"无脸、有翼、覆着黑膜的人形生物，听从诺登斯驱使。它们把闯入梦境危险区的人带走，丢向某个不知名的地方。"},
+  {id:"shaggai", n:"夏盖虫族", e:"Insects from Shaggai", f:"race", s:1, t:"寄生者",
+   d:"来自夏盖星的三角状虫族，能钻入人脑寄生。它们崇拜莎布·尼古拉丝，在宇宙间不断寻找新的宿主星球。"},
+  {id:"moonbeast", n:"月兽", e:"Moon-Beast", f:"race", s:1, t:"月之居民",
+   d:"来自月球的无眼蟾蜍形生物，乘黑色帆船穿梭于梦境之海，奴役人类并与之交易。它们与奈亚拉托提普关系密切。"},
+  {id:"leng", n:"冷蛛", e:"Leng Spider", f:"race", s:1, t:"冷原的紫色巨蛛",
+   d:"冷原（Leng）上的紫色巨蛛，八足而有人脸。它们与月兽、食尸鬼共同存在于梦境世界的边缘地带。"},
+  {id:"formless", n:"无形之子", e:"Formless Spawn", f:"race", s:1, t:"扎特瓜的黑色子嗣",
+   d:"扎特瓜的仆从与子嗣，黑色沥青状的无定形生物，能随需要伸出肢体。它们守卫着恩凯伊的神殿。"},
+  {id:"ghoul", n:"食尸鬼", e:"Ghoul", f:"race", s:1, t:"地下的啃食者",
+   d:"两足、犬面、皮肤如橡皮的生物，居于地下洞穴，以尸体为食。它们与冷原的巨蛛往来密切，人类也可能逐渐转化为其中一员。"},
+  {id:"byakhee", n:"拜亚基", e:"Byakhee", f:"race", s:1, t:"星际的坐骑",
+   d:"巨大的有翼生物，可为人类提供星际旅行。它们侍奉哈斯塔，形象介于鸟、蝙蝠与腐烂的人形之间。"},
+  {id:"hound", n:"廷达洛斯猎犬", e:"Hounds of Tindalos", f:"race", s:1, t:"角中的追猎者",
+   d:"从时间的「角度」中现身的猎犬，只在有角之处现身。它们追猎那些穿越时间者，一旦锁定便永不停歇。"},
+  {id:"firevamp", n:"火焰吸血鬼", e:"Fire Vampire", f:"race", s:1, t:"克图格亚的眷族",
+   d:"由火焰构成的球形生命，侍奉克图格亚。它们能瞬间点燃目标，常被召唤来对抗哈斯塔的信徒。"},
+  {id:"darkyoung", n:"黑山羊幼崽", e:"Dark Young", f:"race", s:1, t:"莎布的子嗣",
+   d:"莎布·尼古拉丝的子嗣，形如树干般的黑色巨柱，生有无数触手与口器。它们出没于森林，接受信徒的献祭。"},
+  {id:"starchild", n:"星之眷族", e:"Star-Spawn", f:"race", s:2, t:"克苏鲁的随从",
+   d:"克苏鲁的随从种族，形似章鱼、龙与人的结合，居于拉莱耶。它们与克苏鲁一同沉睡，等待星辰归位。"},
+  {id:"serpent", n:"蛇人", e:"Serpent People", f:"race", s:1, t:"伊格的子孙",
+   d:"爬行类智慧种族，曾建立华卢西亚文明。它们能伪装成人类，崇拜蛇神伊格，在人类文明的阴影中延续了千万年。"},
+
+  /* ---------------- 人类与典籍 ---------------- */
+  {id:"alhazred", n:"阿卜杜·阿尔哈兹莱德", e:"Abdul Alhazred", f:"human", s:2, t:"疯狂诗人 · 《死灵之书》作者",
+   d:"也门的疯诗人，《死灵之书》（Al Azif）的作者。据传他曾在沙漠中见到不可名状之物，最终在大马士革的广场上被看不见的怪物撕碎。"},
+  {id:"necronomicon", n:"《死灵之书》", e:"Necronomicon", f:"human", s:3, t:"禁书 · Al Azif",
+   d:"阿尔哈兹莱德所著的魔法书，记载了召唤外神与旧日支配者的仪式。现存抄本分藏于密斯卡托尼克大学、大英博物馆等处，读完全书的人多走向疯狂或更糟的结局。"},
+  {id:"carter", n:"伦道夫·卡特", e:"Randolph Carter", f:"human", s:2, t:"梦境探索者",
+   d:"洛夫克拉夫特笔下的自画像式人物，梦境世界的旅行者。他曾在幻梦境中追寻卡达斯，最终以银钥匙穿越终极之门，与犹格·索托斯面对面。"},
+  {id:"armitage", n:"亨利·阿米蒂奇", e:"Henry Armitage", f:"human", s:1, t:"密大教授",
+   d:"密斯卡托尼克大学的图书馆长，率学者们阻止了威尔伯·沃特雷召唤犹格·索托斯的企图，是神话中少数真正「胜利」过的人类。"},
+  {id:"blake", n:"罗伯特·哈里森·布莱克", e:"Robert Harrison Blake", f:"human", s:1, t:"被带走的作家",
+   d:"《夜魔》中的作家，因好奇探索废弃教堂而招来奈亚拉托提普的「血舌」化身，最终在记录中被带走，只留下一段烧焦的痕迹。"},
+  {id:"ward", n:"查尔斯·德克斯特·沃德", e:"Charles Dexter Ward", f:"human", s:1, t:"被夺舍者",
+   d:"普罗维登斯的年轻人，因研究祖先约瑟夫·柯温而被其灵魂侵蚀、逐渐取代，最终连自己的身体与身份都被彻底抹去。"},
+  {id:"curwen", n:"约瑟夫·柯温", e:"Joseph Curwen", f:"human", s:1, t:"炼金术士",
+   d:"沃德的祖先，18 世纪的炼金术士与死灵法师。他通过复活死者获取知识，最终被自己召唤的存在反噬，连骨灰都未能安宁。"},
+  {id:"west", n:"赫伯特·韦斯特", e:"Herbert West", f:"human", s:1, t:"复活者",
+   d:"《Herbert West—Reanimator》中的医学学生，执着于用试剂复活死者，却一次次造出失控的怪物，最终自己成为受害者的猎物。"},
+  {id:"zann", n:"埃里希·赞恩", e:"Erich Zann", f:"human", s:1, t:"阁楼提琴手",
+   d:"《埃里希·赞恩的音乐》中的老提琴手，用近乎疯狂的演奏封住窗外之物。他的音乐既是抵抗，也是一种交易。"},
+  {id:"pickman", n:"理查德·皮克曼", e:"Richard Pickman", f:"human", s:1, t:"食尸鬼画家",
+   d:"波士顿的画家，以描绘可怖的地下生物闻名。他的「模特」正是真实的食尸鬼，而他最终走入地下，成为它们的一员。"},
+  {id:"wilbur", n:"威尔伯·沃特雷", e:"Wilbur Whateley", f:"human", s:2, t:"犹格之子",
+   d:"犹格·索托斯与拉维尼亚·沃特雷之子，生长速度惊人，面孔如山羊。他为召唤父亲而窃取《死灵之书》，最终被看门犬撕碎。"},
+  {id:"lavinia", n:"拉维尼亚·沃特雷", e:"Lavinia Whateley", f:"human", s:1, t:"威尔伯之母",
+   d:"乡间的女子，与犹格·索托斯结合生下威尔伯。她知晓全部真相，最终在恐惧中消失于谷仓的黑暗。"},
+  {id:"oldwhateley", n:"老沃特雷", e:"Old Whateley", f:"human", s:1, t:"仪式的主持者",
+   d:"威尔伯的外祖父，痴迷于《死灵之书》的农夫。他为召唤犹格·索托斯做足了准备，最终死于仪式带来的反噬。"},
+  {id:"crow", n:"提图斯·克罗", e:"Titus Crow", f:"human", s:2, t:"旧神的战士",
+   d:"布莱恩·拉姆利笔下的学者，继承德·马里尼的衣钵，用科技与旧神之力对抗克苏鲁，最终驾着时空钟流浪于宇宙之间。"}
+];
+
+/* a,b: 端点   r: 关系类型   l: 关系名   d: 说明 */
+const EDGES = [
+  /* 外神之间 */
+  {a:"azathoth",b:"nyarlathotep",r:"serve",l:"灵魂与使者",d:"奈亚拉托提普是阿撒托斯的意志与信使，也是唯一能理解并执行其「意愿」的存在。"},
+  {a:"azathoth",b:"yog",r:"other",l:"同为原初",d:"二者同属宇宙本源层面：阿撒托斯是中心，犹格·索托斯是时空本身。"},
+  {a:"azathoth",b:"shub",r:"other",l:"混沌的一体两面",d:"阿撒托斯的盲目与莎布·尼古拉丝的丰饶，常被视为同一原初力量的两面。"},
+  {a:"azathoth",b:"tulzscha",r:"serve",l:"环绕之焰",d:"图尔兹查常被描述为环绕阿撒托斯王座舞蹈的绿色火焰之一。"},
+  {a:"azathoth",b:"ghroth",r:"serve",l:"唤醒者",d:"格赫罗斯的歌声服务于阿撒托斯的宇宙循环——唤醒沉睡者，以推动终结。"},
+  {a:"azathoth",b:"cthugha",r:"other",l:"火之同源",d:"克图格亚的火焰常被视为源自阿撒托斯周围的混沌之焰。"},
+  {a:"yog",b:"tawil",r:"serve",l:"化身 · 门前的引路者",d:"塔维尔·亚特·乌姆尔是犹格·索托斯面向凡人的形象，守在终极之门前。"},
+  {a:"yog",b:"yad",r:"other",l:"镜像",d:"亚德-萨达格是犹格·索托斯在旧神阵营中的对应存在，同样全知而不含恶意。"},
+  {a:"yog",b:"hound",r:"other",l:"时间性的同族",d:"廷达洛斯猎犬与犹格·索托斯同属时间维度的存在，猎犬追猎一切穿越时间者。"},
+  {a:"shub",b:"darkyoung",r:"created",l:"子嗣",d:"黑山羊幼崽是莎布·尼古拉丝的子嗣与使者，出没于她的信徒聚集之地。"},
+  {a:"shub",b:"shaggai",r:"worship",l:"被崇拜",d:"夏盖虫族崇拜莎布·尼古拉丝，将其奉为母神。"},
+  {a:"nyarlathotep",b:"nodens",r:"enemy",l:"宿敌",d:"诺登斯与奈亚拉托提普长期敌对，二者在梦境与深渊之间反复争夺。"},
+  {a:"nyarlathotep",b:"blake",r:"other",l:"血舌降临",d:"奈亚拉托提普以「血舌」化身降临，带走了作家布莱克。"},
+  {a:"nyarlathotep",b:"carter",r:"other",l:"梦境中的引导",d:"在幻梦境中，奈亚拉托提普曾以多种面貌与卡特相遇，并一步步把他引向终极之门。"},
+  {a:"nyarlathotep",b:"moonbeast",r:"serve",l:"驱使",d:"月兽与奈亚拉托提普关系密切，常被视为其在梦境世界的仆从。"},
+  {a:"yog",b:"wilbur",r:"created",l:"父子",d:"威尔伯·沃特雷是犹格·索托斯与拉维尼亚之子，半人半神。"},
+  {a:"yog",b:"lavinia",r:"kin",l:"结合",d:"犹格·索托斯与拉维尼亚·沃特雷结合，生下威尔伯。"},
+  {a:"yog",b:"carter",r:"other",l:"穿越终极之门",d:"卡特以银钥匙穿越终极之门，在门后见到了犹格·索托斯。"},
+  {a:"ghroth",b:"cthulhu",r:"other",l:"唤醒",d:"格赫罗斯的歌声会唤醒沉睡的旧日支配者——包括拉莱耶之下的克苏鲁。"},
+  {a:"tulzscha",b:"cthugha",r:"other",l:"绿焰与活焰",d:"图尔兹查与克图格亚常被混同，或被视为同源的火之存在。"},
+  {a:"daoloth",b:"tawil",r:"other",l:"面纱与门",d:"道罗斯撕裂空间的「面纱」，与塔维尔所守的门在概念上彼此相邻。"},
+  {a:"abhoth",b:"ubbo",r:"other",l:"原初的生命",d:"二者都与生命起源有关：乌波·萨斯拉是地球生命的始祖，阿布霍斯则是畸形繁殖的源头。"},
+  {a:"ngyr",b:"azathoth",r:"other",l:"宇宙的两端",d:"恩格尔·科拉斯位于银河之外，与阿撒托斯分属宇宙尺度上的两极恐怖。"},
+  {a:"yibb",b:"nightgaunt",r:"other",l:"血食",d:"夜魇以伊波·兹特尔滴落的黑色血液为食。"},
+  {a:"shub",b:"necronomicon",r:"other",l:"被记载",d:"《死灵之书》中载有召唤莎布·尼古拉丝的仪式与「千子」的描述。"},
+
+  /* 旧日支配者 */
+  {a:"cthulhu",b:"hastur",r:"kin",l:"兄弟 / 半兄弟",d:"德雷斯体系中二者被描述为兄弟或半兄弟，分别象征水与风。"},
+  {a:"hastur",b:"cthugha",r:"enemy",l:"风与火",d:"哈斯塔与克图格亚彼此不容，召唤其一便可用来对抗另一者。"},
+  {a:"hastur",b:"byakhee",r:"serve",l:"仆从与坐骑",d:"拜亚基侍奉哈斯塔，为他的信徒提供星际旅行。"},
+  {a:"ithaqua",b:"hastur",r:"other",l:"风之同族",d:"伊塔库亚常被视为哈斯塔的从属，或风的另一种形态。"},
+  {a:"cthugha",b:"firevamp",r:"created",l:"眷族",d:"火焰吸血鬼由火焰构成，是克图格亚的眷族与使者。"},
+  {a:"firevamp",b:"hastur",r:"enemy",l:"火与风的战争",d:"火焰吸血鬼被召唤来对抗哈斯塔的信徒，这是两位神祇敌意的延伸。"},
+  {a:"dagon",b:"hydra",r:"kin",l:"配偶",d:"达贡与海德拉是深潜者的父神与母神，共同统治海底之城。"},
+  {a:"dagon",b:"deepones",r:"created",l:"父神",d:"达贡是深潜者的父神，与人类订立以血统换取海洋丰产的契约。"},
+  {a:"hydra",b:"deepones",r:"created",l:"母神",d:"海德拉是深潜者的母神，与达贡一同孕育这个种族。"},
+  {a:"cthulhu",b:"dagon",r:"other",l:"海洋的邻邦",d:"二者同掌海洋：克苏鲁沉睡于拉莱耶，达贡统治深潜者的海底城。"},
+  {a:"tsathoggua",b:"formless",r:"created",l:"仆从",d:"无形之子是扎特瓜的仆从与子嗣，守卫着恩凯伊深处的神殿。"},
+  {a:"tsathoggua",b:"atlach",r:"other",l:"恩凯伊的邻居",d:"二者同处恩凯伊：扎特瓜沉睡于下方的玄武岩宫殿，阿特拉克·纳克亚在其上织网。"},
+  {a:"tsathoggua",b:"nyogtha",r:"other",l:"地下的同族",d:"同属地下深处的古老存在，共享同一套黑暗生态与人间的献祭。"},
+  {a:"atlach",b:"leng",r:"other",l:"蜘蛛的谱系",d:"冷原巨蛛与阿特拉克·纳克亚同属蜘蛛形态的存在，常被信徒视为同源。"},
+  {a:"yig",b:"serpent",r:"created",l:"父神",d:"伊格是蛇人的父神，蛇人文明的一切仪式都指向他。"},
+  {a:"chaugner",b:"necronomicon",r:"other",l:"被记载",d:"《死灵之书》中提及对昌格纳·方庚的祭祀方式与血食之需。"},
+  {a:"rhan",b:"ithaqua",r:"other",l:"寒冷",d:"二者都与冰雪相关：伊塔库亚游行于暴风雪，兰·提戈斯沉睡于冰河。"},
+  {a:"aphoom",b:"cthugha",r:"other",l:"冷焰与活焰",d:"阿弗姆·扎是克图格亚的「冷」之对应体，性质相反，来源相同。"},
+  {a:"glaaki",b:"byatis",r:"other",l:"塞文河谷的邻居",d:"二者都被封印于塞文河谷一带，是坎贝尔与布洛赫笔下相邻的两桩恐怖。"},
+  {a:"ygolonac",b:"necronomicon",r:"other",l:"被释放",d:"阅读《死灵之书》一类的禁书，可能解除对伊戈罗纳克的封印。"},
+  {a:"mnomquah",b:"moonbeast",r:"other",l:"月之领域",d:"姆西斯哈居于月下，月兽来自月球，二者同属「月」的领域。"},
+  {a:"nyogtha",b:"formless",r:"other",l:"地下的住民",d:"尼约格萨与无形之子同属地下的黑暗生态，常在巫师的仪式中一同出现。"},
+  {a:"cthulhu",b:"starchild",r:"created",l:"星之眷族",d:"星之眷族是克苏鲁的随从种族，与其一同沉睡于拉莱耶。"},
+  {a:"cthulhu",b:"necronomicon",r:"other",l:"被记载",d:"《死灵之书》以「克苏鲁」之名记录了拉莱耶与星辰归位的预言。"},
+  {a:"hastur",b:"necronomicon",r:"other",l:"被记载",d:"书中提到了「不可命名者」与黄衣之王的关联，以及召唤时的风险。"},
+
+  /* 旧神 */
+  {a:"nodens",b:"nightgaunt",r:"serve",l:"驱使夜魇",d:"诺登斯统御夜魇，它们执行他的意志，把闯入者带离梦境深处。"},
+  {a:"nodens",b:"carter",r:"other",l:"梦境的援手",d:"《梦寻秘境卡达斯》中，诺登斯出手帮助卡特摆脱奈亚拉托提普的追捕。"},
+  {a:"nodens",b:"kthanid",r:"other",l:"旧神同盟",d:"同为旧神阵营的核心，共同维持对旧日支配者的封印。"},
+  {a:"kthanid",b:"cthulhu",r:"kin",l:"兄弟",d:"拉姆利设定中克塔尼德是克苏鲁的兄弟，形貌相同而立场相反。"},
+  {a:"kthanid",b:"yad",r:"other",l:"旧神同盟",d:"二者同属拉姆利体系中的旧神高层。"},
+  {a:"kthanid",b:"crow",r:"other",l:"背后的力量",d:"克罗与旧神结盟，克塔尼德正是他所能依凭的力量来源。"},
+  {a:"bast",b:"kthanid",r:"other",l:"旧神同盟",d:"巴斯特在德雷斯体系中被归入旧神一方。"},
+  {a:"bast",b:"carter",r:"other",l:"梦境中的庇护",d:"幻梦境的猫群是旅行者的盟友，与巴斯特的庇护一脉相承。"},
+  {a:"hypnos",b:"carter",r:"other",l:"梦的边界",d:"修普诺斯的领域与卡特的梦境之旅相邻，二者都触及睡眠背后的真实。"},
+
+  /* 血系 */
+  {a:"cthulhu",b:"ythogtha",r:"kin",l:"父子",d:"伊索格萨是克苏鲁的子嗣，被囚于深渊。"},
+  {a:"cthulhu",b:"zoth",r:"kin",l:"父子",d:"佐斯-奥莫格是克苏鲁的子嗣，被囚于太平洋海底。"},
+  {a:"cthulhu",b:"ghatanothoa",r:"kin",l:"父子",d:"吉坦是克苏鲁的子嗣，沉睡于姆大陆的火山之下。"},
+  {a:"cthulhu",b:"cthylla",r:"kin",l:"父女",d:"克塔格亚是克苏鲁的女儿，也是他复活的关键。"},
+  {a:"cthulhu",b:"kassogtha",r:"kin",l:"配偶",d:"卡索格萨是克苏鲁的配偶，诸子嗣的母亲之一。"},
+  {a:"cthulhu",b:"idhyaa",r:"kin",l:"配偶 / 双胞胎",d:"伊德·雅来自双子星 Xoth，是克苏鲁的配偶或双胞胎姊妹。"},
+  {a:"ythogtha",b:"zoth",r:"kin",l:"兄弟",d:"同为克苏鲁之子，一同被封印于深海与深渊。"},
+  {a:"zoth",b:"ghatanothoa",r:"kin",l:"兄弟",d:"同为克苏鲁之子，分踞海底与火山之下。"},
+  {a:"ythogtha",b:"ghatanothoa",r:"kin",l:"兄弟",d:"同为克苏鲁之子，彼此的封印互为呼应。"},
+  {a:"kassogtha",b:"ythogtha",r:"kin",l:"母子",d:"卡索格萨是克苏鲁诸子嗣的母亲之一。"},
+  {a:"idhyaa",b:"ythogtha",r:"kin",l:"母子",d:"伊德·雅是克苏鲁诸子嗣的母亲之一。"},
+  {a:"cthylla",b:"deepones",r:"other",l:"守护者",d:"深潜者严密守护克塔格亚，因为她的存亡关乎克苏鲁的复活。"},
+  {a:"zoth",b:"deepones",r:"other",l:"看守",d:"深潜者世代看守囚禁佐斯-奥莫格的亚斯兰废墟。"},
+
+  /* 种族 */
+  {a:"elders",b:"shoggoth",r:"created",l:"造主与奴隶",d:"古老者创造了修格斯作为生物机械，最终被它们反噬。"},
+  {a:"elders",b:"polyps",r:"enemy",l:"地球争夺战",d:"古老者与飞水螅为地球的统治权开战，最终把对手封印于地下。"},
+  {a:"elders",b:"migo",r:"enemy",l:"战争",d:"古老者与米·戈曾为地球的矿产与领地开战，战场就在南极的冰下。"},
+  {a:"migo",b:"nyarlathotep",r:"serve",l:"服务",d:"米·戈为外神采集地球矿物，其交易对象常被指向奈亚拉托提普。"},
+  {a:"colour",b:"azathoth",r:"other",l:"宇宙的碎片",d:"星之彩被认为是从外宇宙落入地球的一小片异质存在。"},
+  {a:"shaggai",b:"necronomicon",r:"other",l:"被记载",d:"《死灵之书》提及夏盖虫族与它们在宇宙间寻找宿主的迁徙。"},
+  {a:"moonbeast",b:"leng",r:"other",l:"梦境的同伙",d:"月兽与冷原巨蛛在幻梦境中一同奴役人类、经营黑帆船贸易。"},
+  {a:"leng",b:"ghoul",r:"other",l:"冷原的居民",d:"冷原的巨蛛与食尸鬼共处，二者在幻梦境中往来密切。"},
+  {a:"ghoul",b:"pickman",r:"kin",l:"同类",d:"皮克曼最终走入地下，成为食尸鬼的一员。"},
+  {a:"serpent",b:"necronomicon",r:"other",l:"被记载",d:"《死灵之书》记载了蛇人文明与其神伊格。"},
+
+  /* 人类与典籍 */
+  {a:"alhazred",b:"necronomicon",r:"created",l:"作者",d:"阿尔哈兹莱德写下《死灵之书》（原名 Al Azif），此后一切灾难都由此书起。"},
+  {a:"necronomicon",b:"armitage",r:"other",l:"保管",d:"阿米蒂奇保管着密斯卡托尼克大学的《死灵之书》抄本。"},
+  {a:"necronomicon",b:"wilbur",r:"other",l:"窃取",d:"威尔伯试图窃取密大的抄本，以完成召唤犹格·索托斯的仪式。"},
+  {a:"necronomicon",b:"oldwhateley",r:"other",l:"研读",d:"老沃特雷终其一生研读此书，为外孙的降生做准备。"},
+  {a:"necronomicon",b:"crow",r:"other",l:"被使用",d:"克罗利用书中的知识对抗旧日支配者，把禁书变成了武器。"},
+  {a:"necronomicon",b:"curwen",r:"other",l:"研读",d:"柯温从书中学会了复活死者的仪式，也因此招来了毁灭。"},
+  {a:"wilbur",b:"lavinia",r:"kin",l:"母子",d:"拉维尼亚是威尔伯的母亲，也是这场仪式的祭品之一。"},
+  {a:"wilbur",b:"oldwhateley",r:"kin",l:"祖孙",d:"老沃特雷是威尔伯的外祖父，仪式的主持者。"},
+  {a:"lavinia",b:"oldwhateley",r:"kin",l:"父女",d:"老沃特雷把自己的女儿献给了犹格·索托斯。"},
+  {a:"ward",b:"curwen",r:"kin",l:"祖先 / 夺舍",d:"柯温的灵魂逐渐侵蚀并取代了自己的后代沃德。"},
+  {a:"west",b:"curwen",r:"other",l:"同类的技艺",d:"韦斯特与柯温都以复活死者为业，二者的方法在源流上相通。"},
+  {a:"armitage",b:"wilbur",r:"enemy",l:"驱逐",d:"阿米蒂奇识破威尔伯的身份，最终导致其在图书馆中丧命。"},
+  {a:"zann",b:"azathoth",r:"other",l:"窗外的混沌",d:"赞恩的演奏对抗着窗外那片属于阿撒托斯的混沌。"},
+  {a:"crow",b:"cthulhu",r:"enemy",l:"对抗者",d:"提图斯·克罗以旧神之力对抗克苏鲁，多次阻止其苏醒。"}
+];
+
+/* =========================================================
+   常量 & 工具
+   ========================================================= */
+const EDGE_STYLE = {
+  kin:    {label:"血缘",   color:"#7ee787", dash:"",       rest:108, w:1.5},
+  serve:  {label:"从属",   color:"#b06cff", dash:"5 6",    rest:135, w:1.4},
+  created:{label:"造物",   color:"#5b9dff", dash:"1.5 6",  rest:135, w:1.4},
+  worship:{label:"崇拜",   color:"#ffd166", dash:"11 7",   rest:162, w:1.3},
+  enemy:  {label:"敌对",   color:"#ff5c7a", dash:"3 8",    rest:212, w:1.4},
+  other:  {label:"关联",   color:"#7b88ad", dash:"2 7",    rest:158, w:1.1}
+};
+/* 六个引力锚点：外神居中，旧日支配者/旧神居上，血系与种族分居两侧，人类与典籍托底 */
+const ANCHORS = {
+  outer:{x:1180,y:793}, old:{x:681,y:591}, elder:{x:1689,y:585},
+  blood:{x:648,y:1013}, race:{x:1744,y:1013}, human:{x:1180,y:1141}
+};
+const NS = "http://www.w3.org/2000/svg";
+const $ = s => document.querySelector(s);
+
+/* =========================================================
+   背景星空
+   ========================================================= */
+const sky = $("#sky"), sctx = sky.getContext("2d");
+let skyDots = [];
+function drawSky(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = innerWidth, h = innerHeight;
+  sky.width = w * dpr; sky.height = h * dpr;
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+  sctx.clearRect(0,0,w,h);
+  sctx.fillStyle = "#04050b";
+  sctx.fillRect(0,0,w,h);
+
+  sctx.globalCompositeOperation = "lighter";
+  const nebs = [
+    [0.18,0.12,0.62,"rgba(112,66,200,0.13)"],
+    [0.86,0.72,0.55,"rgba(28,170,180,0.10)"],
+    [0.62,0.96,0.50,"rgba(180,50,140,0.09)"],
+    [0.50,0.02,0.45,"rgba(60,90,200,0.10)"]
+  ];
+  for(const [px,py,pr,col] of nebs){
+    const g = sctx.createRadialGradient(px*w,py*h,0,px*w,py*h,pr*Math.max(w,h));
+    g.addColorStop(0,col); g.addColorStop(0.55,col.replace(/[\d.]+\)$/,"0.02)"));
+    g.addColorStop(1,"rgba(0,0,0,0)");
+    sctx.fillStyle = g; sctx.fillRect(0,0,w,h);
+  }
+  if(!skyDots.length){
+    for(let i=0;i<760;i++){
+      skyDots.push({x:Math.random(),y:Math.random(),r:Math.random()*1.25+.25,
+        a:Math.random()*.75+.12, hue:Math.random()});
+    }
+  }
+  for(const d of skyDots){
+    const col = d.hue<.72 ? `rgba(232,238,255,${d.a})`
+             : d.hue<.88 ? `rgba(180,200,255,${d.a})`
+             : `rgba(255,225,190,${d.a})`;
+    sctx.fillStyle = col;
+    sctx.beginPath(); sctx.arc(d.x*w, d.y*h, d.r, 0, 6.2832); sctx.fill();
+  }
+  // 几颗亮星的十字星芒
+  const flares = [[0.12,0.28],[0.78,0.19],[0.91,0.55],[0.33,0.83],[0.55,0.36]];
+  for(const [fx,fy] of flares){
+    const x = fx*w, y = fy*h, L = 16;
+    const g = sctx.createRadialGradient(x,y,0,x,y,L*2.2);
+    g.addColorStop(0,"rgba(220,235,255,0.55)"); g.addColorStop(1,"rgba(220,235,255,0)");
+    sctx.fillStyle = g; sctx.beginPath(); sctx.arc(x,y,L*2.2,0,6.2832); sctx.fill();
+    sctx.strokeStyle = "rgba(210,228,255,0.28)"; sctx.lineWidth = 1;
+    sctx.beginPath(); sctx.moveTo(x-L,y); sctx.lineTo(x+L,y);
+    sctx.moveTo(x,y-L); sctx.lineTo(x,y+L); sctx.stroke();
+  }
+  sctx.globalCompositeOperation = "source-over";
+}
+
+/* =========================================================
+   图数据准备
+   ========================================================= */
+const N = NODES.map(d => {
+  const anc = ANCHORS[d.f] || {x:0,y:0};
+  return {
+    ...d, x: anc.x, y: anc.y,
+    vx:0, vy:0, r: d.s === 3 ? 13 : d.s === 2 ? 9.5 : 6.6,
+    color: FAC[d.f] ? FAC[d.f].color : "#888"
+  };
+});
+const BY_ID = Object.fromEntries(N.map(n=>[n.id,n]));
+const L = EDGES.filter(e=>BY_ID[e.a] && BY_ID[e.b]).map(e=>{
+  const st = EDGE_STYLE[e.r] || EDGE_STYLE.other;
+  return {...e, A:BY_ID[e.a], B:BY_ID[e.b], st};
+});
+
+/* 每个节点的关系索引 */
+const REL = Object.fromEntries(N.map(n=>[n.id,[]]));
+for(const l of L){
+  REL[l.a].push({other:l.b, l});
+  REL[l.b].push({other:l.a, l});
+}
+
+/* =========================================================
+   SVG 构建
+   ========================================================= */
+const svg = $("#map");
+const gView = document.createElementNS(NS,"g");
+const gLinks = document.createElementNS(NS,"g");
+const gNodes = document.createElementNS(NS,"g");
+gView.append(gLinks, gNodes);
+
+const defs = document.createElementNS(NS,"defs");
+defs.innerHTML = `
+  <filter id="soft" x="-120%" y="-120%" width="340%" height="340%">
+    <feGaussianBlur stdDeviation="7"/>
+  </filter>
+  <filter id="soft2" x="-120%" y="-120%" width="340%" height="340%">
+    <feGaussianBlur stdDeviation="2.2"/>
+  </filter>`;
+svg.appendChild(defs);
+svg.appendChild(gView);
+
+const linkEls = L.map(l=>{
+  const ln = document.createElementNS(NS,"line");
+  ln.setAttribute("stroke", l.st.color);
+  ln.setAttribute("stroke-width", l.st.w);
+  if(l.st.dash) ln.setAttribute("stroke-dasharray", l.st.dash);
+  ln.setAttribute("stroke-linecap","round");
+  gLinks.appendChild(ln);
+  return ln;
+});
+const linkLabels = L.map(l=>{
+  const tx = document.createElementNS(NS,"text");
+  tx.setAttribute("font-size","9.5");
+  tx.setAttribute("fill","#aab4d0");
+  tx.setAttribute("text-anchor","middle");
+  tx.setAttribute("paint-order","stroke");
+  tx.setAttribute("stroke","#05060c");
+  tx.setAttribute("stroke-width","3");
+  tx.setAttribute("pointer-events","none");
+  tx.textContent = l.l;
+  tx.style.opacity = 0;
+  gLinks.appendChild(tx);
+  return tx;
+});
+
+const nodeEls = N.map(n=>{
+  const g = document.createElementNS(NS,"g");
+  g.setAttribute("data-id", n.id);
+  g.style.cursor = "pointer";
+
+  const halo = document.createElementNS(NS,"circle");
+  halo.setAttribute("r", n.r*2.6);
+  halo.setAttribute("fill", n.color);
+  halo.setAttribute("opacity","0.16");
+  halo.setAttribute("filter","url(#soft)");
+
+  const core = document.createElementNS(NS,"circle");
+  core.setAttribute("r", n.r);
+  core.setAttribute("fill", n.color);
+  core.setAttribute("filter","url(#soft2)");
+
+  const ring = document.createElementNS(NS,"circle");
+  ring.setAttribute("r", n.r + 5);
+  ring.setAttribute("fill","none");
+  ring.setAttribute("stroke", n.color);
+  ring.setAttribute("stroke-width","1.1");
+  ring.setAttribute("opacity","0");
+  ring.setAttribute("stroke-dasharray","2 3");
+
+  const spark = document.createElementNS(NS,"circle");
+  spark.setAttribute("r", Math.max(1.4, n.r*0.34));
+  spark.setAttribute("fill","#fff");
+  spark.setAttribute("opacity","0.9");
+
+  const label = document.createElementNS(NS,"text");
+  label.setAttribute("x", 0);
+  label.setAttribute("y", n.r + 14);
+  label.setAttribute("text-anchor","middle");
+  label.setAttribute("font-size", n.s === 3 ? 16 : n.s === 2 ? 13.6 : 11.8);
+  label.setAttribute("font-weight", n.s === 3 ? 600 : 400);
+  label.setAttribute("fill", n.s === 3 ? "#eef2ff" : "#b8c2de");
+  label.setAttribute("paint-order","stroke");
+  label.setAttribute("stroke","#05060c");
+  label.setAttribute("stroke-width","3.4");
+  label.setAttribute("pointer-events","none");
+  label.textContent = n.n;
+
+  g.append(halo, core, ring, spark, label);
+  gNodes.appendChild(g);
+  return {g, halo, core, ring, spark, label, n};
+});
+
+/* =========================================================
+   力导向
+   ========================================================= */
+const REP = 34000, SPRING = 0.035, DAMP = 0.855, ANCHOR_K = 0.055;
+/* 固定随机种子：每次打开都是同一张星图；点「重排」换一个种子重新推演 */
+let SEED = 20240617 >>> 0;
+function rnd(){ SEED = (SEED * 1664525 + 1013904223) >>> 0; return SEED / 4294967296; }
+function seedNodes(spread){
+  for(const n of N){
+    const a = ANCHORS[n.f];
+    n.x = a.x + (rnd()-.5)*spread;
+    n.y = a.y + (rnd()-.5)*spread;
+    n.vx = n.vy = 0;
+  }
+}
+function simulate(ticks){
+  for(let t=0;t<ticks;t++){
+    for(let i=0;i<N.length;i++){
+      const a = N[i];
+      for(let j=i+1;j<N.length;j++){
+        const b = N[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d2 = dx*dx + dy*dy;
+        if(d2 < 4){ dx = (rnd()-.5)*2; dy = (rnd()-.5)*2; d2 = 4; }
+        const d = Math.sqrt(d2);
+        const f = REP / d2;
+        const ux = dx/d, uy = dy/d;
+        a.vx -= ux*f; a.vy -= uy*f;
+        b.vx += ux*f; b.vy += uy*f;
+      }
+    }
+    for(const l of L){
+      const a = l.A, b = l.B;
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d = Math.hypot(dx,dy) || 0.01;
+      const f = (d - l.st.rest) * SPRING;
+      const ux = dx/d, uy = dy/d;
+      a.vx += ux*f; a.vy += uy*f;
+      b.vx -= ux*f; b.vy -= uy*f;
+    }
+    for(const n of N){
+      const anc = ANCHORS[n.f];
+      if(anc){ n.vx += (anc.x - n.x) * ANCHOR_K; n.vy += (anc.y - n.y) * ANCHOR_K; }
+      n.vx *= DAMP; n.vy *= DAMP;
+      const sp = Math.hypot(n.vx, n.vy);
+      if(sp > 34){ n.vx *= 34/sp; n.vy *= 34/sp; }
+      n.x += n.vx; n.y += n.vy;
+    }
+  }
+}
+
+/* =========================================================
+   标签排布：给每个星点挑一个不打架的标签位置
+   ========================================================= */
+let DEG = null, LABEL_BOXES = [];
+const labelFS = n => n.s === 3 ? 16 : n.s === 2 ? 13.6 : 11.8;
+const labelW  = n => [...n.n].length * labelFS(n) * 1.02;
+
+function placeLabels(){
+  if(!DEG){
+    DEG = {};
+    for(const l of L){ DEG[l.a] = (DEG[l.a]||0)+1; DEG[l.b] = (DEG[l.b]||0)+1; }
+  }
+  const boxes = [];           // 已占位标签
+  LABEL_BOXES = [];
+  const cores = N.map(n=>({x:n.x, y:n.y, r:n.r+2}));
+  const order = [...nodeEls].sort((a,b)=> (b.n.s - a.n.s) || ((DEG[b.n.id]||0)-(DEG[a.n.id]||0)));
+
+  for(const ne of order){
+    const n = ne.n, fs = labelFS(n), w = labelW(n);
+    const hTop = fs*0.82, hBot = fs*0.26, r = n.r;
+    // 候选：{anchor, dx, dy}
+    const cands = [
+      ["middle", 0, r+14],                      // 正下（默认）
+      ["middle", 0, -(r+7)],                    // 正上
+      ["start",  r+9,  fs*0.30],                // 右
+      ["end",   -(r+9), fs*0.30],               // 左
+      ["start",  r*0.7+5,  r+12],               // 右下
+      ["end",   -(r*0.7+5), r+12],              // 左下
+      ["start",  r*0.7+5,  -(r+5)],             // 右上
+      ["end",   -(r*0.7+5), -(r+5)],            // 左上
+      ["start",  r+9, -(r*0.75)],               // 右上（平）
+      ["end",   -(r+9), -(r*0.75)],             // 左上（平）
+      ["start",  r+9,  r*0.85+6],               // 右下（平）
+      ["end",   -(r+9), r*0.85+6]               // 左下（平）
+    ];
+    let best = null;
+    for(let ci=0; ci<cands.length; ci++){
+      const [anc, dx, dy] = cands[ci];
+      const x0 = anc === "middle" ? n.x + dx - w/2 : anc === "start" ? n.x + dx : n.x + dx - w;
+      const y0 = n.y + dy - hTop, y1 = n.y + dy + hBot;
+      const bx = {x0, y0, x1: x0 + w, y1};
+      let cost = ci * 2.5;                       // 越靠前的候选越优先
+      for(const b of boxes){
+        const ox = Math.min(bx.x1,b.x1) - Math.max(bx.x0,b.x0);
+        const oy = Math.min(bx.y1,b.y1) - Math.max(bx.y0,b.y0);
+        if(ox > 0 && oy > 0) cost += 1000 + ox*oy;  // 标签互相压 → 重罚
+      }
+      for(const c of cores){
+        const nx = Math.max(bx.x0, Math.min(c.x, bx.x1));
+        const ny = Math.max(bx.y0, Math.min(c.y, bx.y1));
+        const dd = Math.hypot(nx-c.x, ny-c.y);
+        if(dd < c.r) cost += 220;                 // 盖住别的星体 → 中罚
+      }
+      if(!best || cost < best.cost) best = {cost, anc, dx, dy, box: bx};
+    }
+    boxes.push(best.box);
+    LABEL_BOXES.push(best.box);
+    ne.label.setAttribute("text-anchor", best.anc);
+    ne.label.setAttribute("x", best.dx);
+    ne.label.setAttribute("y", best.dy);
+  }
+}
+
+/* =========================================================
+   视图（缩放/平移）
+   ========================================================= */
+let view = {x:0, y:0, k:1};
+function applyView(){
+  gView.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+  updateLabelVisibility();
+}
+function fit(){
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  for(const n of N){ minx=Math.min(minx,n.x); maxx=Math.max(maxx,n.x); miny=Math.min(miny,n.y); maxy=Math.max(maxy,n.y); }
+  for(const b of LABEL_BOXES){
+    minx=Math.min(minx,b.x0); maxx=Math.max(maxx,b.x1);
+    miny=Math.min(miny,b.y0); maxy=Math.max(maxy,b.y1);
+  }
+  const padX = 34, padY = 26;
+  const BAR = 64, GAP = 16;                 // 顶栏高度 + 留白
+  const w = innerWidth, h = innerHeight - BAR - GAP;
+  const bw = maxx-minx+padX*2, bh = maxy-miny+padY*2;
+  const k = Math.min(w/bw, h/bh);
+  view.k = Math.max(.28, Math.min(1.6, k));
+  view.x = w/2 - (minx+maxx)/2 * view.k;
+  view.y = BAR + GAP + h/2 - (miny+maxy)/2 * view.k;
+  applyView();
+}
+let viewAnim = null;
+function animateTo(tx, ty, tk){
+  if(viewAnim) cancelAnimationFrame(viewAnim);
+  const f = {...view}, start = performance.now(), dur = 460;
+  const step = now => {
+    const p = Math.min(1,(now-start)/dur);
+    const e = 1-Math.pow(1-p,3);
+    view.x = f.x + (tx-f.x)*e;
+    view.y = f.y + (ty-f.y)*e;
+    view.k = f.k + (tk-f.k)*e;
+    applyView();
+    if(p<1) viewAnim = requestAnimationFrame(step);
+  };
+  viewAnim = requestAnimationFrame(step);
+}
+function centerOn(n, k){
+  const w = innerWidth, h = innerHeight;
+  const off = panelOpen && w > 900 ? 176 : 0;
+  animateTo(w/2 - off - n.x*k, h/2 - n.y*k, k);
+}
+
+/* =========================================================
+   渲染
+   ========================================================= */
+let selected = null, hovered = null, query = "";
+const hiddenFac = new Set();
+let showAllLabels = false;
+
+function isDimmed(n){
+  if(query){
+    const q = query.toLowerCase();
+    const hit = n.n.toLowerCase().includes(q) || n.e.toLowerCase().includes(q) || n.t.toLowerCase().includes(q);
+    if(!hit) return true;
+  }
+  const focus = hovered || selected;
+  if(focus){
+    if(n === focus) return false;
+    if(REL[focus.id].some(r => r.other === n.id)) return false;
+    return true;
+  }
+  return false;
+}
+function updateLabelVisibility(){
+  const k = view.k;
+  for(const ne of nodeEls){
+    const n = ne.n;
+    let show = true;
+    if(n.s === 1 && k < 0.7) show = false;
+    if(n.s === 2 && k < 0.46) show = false;
+    ne.label.style.opacity = show ? 1 : 0;
+  }
+}
+
+function paint(){
+  for(let i=0;i<L.length;i++){
+    const l = L[i], el = linkEls[i];
+    el.setAttribute("x1", l.A.x); el.setAttribute("y1", l.A.y);
+    el.setAttribute("x2", l.B.x); el.setAttribute("y2", l.B.y);
+  }
+  for(const ne of nodeEls){
+    const n = ne.n;
+    ne.g.setAttribute("transform", `translate(${n.x},${n.y})`);
+  }
+  refreshStyles();
+}
+
+function refreshStyles(){
+  const focus = hovered || selected;
+  const focusId = focus ? focus.id : null;
+
+  for(const ne of nodeEls){
+    const n = ne.n;
+    const hidden = hiddenFac.has(n.f);
+    const dim = isDimmed(n);
+    ne.g.style.display = hidden ? "none" : "";
+    const op = dim ? 0.13 : 1;
+    ne.g.style.opacity = op;
+    ne.g.style.transition = "opacity .22s";
+    const isFocus = n === focus;
+    ne.ring.setAttribute("opacity", isFocus ? 0.95 : 0);
+    ne.halo.setAttribute("opacity", isFocus ? 0.34 : (dim ? 0.05 : 0.16));
+    ne.core.setAttribute("r", n.r * (isFocus ? 1.16 : 1));
+    ne.label.style.fontWeight = (isFocus || n.s === 3) ? 600 : 400;
+  }
+
+  for(let i=0;i<L.length;i++){
+    const l = L[i], el = linkEls[i], tx = linkLabels[i];
+    const hidden = hiddenFac.has(l.A.f) || hiddenFac.has(l.B.f);
+    el.style.display = hidden ? "none" : "";
+    tx.style.display = hidden ? "none" : "";
+
+    const touches = focusId && (l.a === focusId || l.b === focusId);
+    let op = 0.34;
+    if(touches) op = 0.95;
+    else if(focusId) op = 0.05;
+    if(query){
+      const q = query.toLowerCase();
+      const hitA = l.A.n.toLowerCase().includes(q) || l.A.e.toLowerCase().includes(q);
+      const hitB = l.B.n.toLowerCase().includes(q) || l.B.e.toLowerCase().includes(q);
+      if(!hitA && !hitB) op = Math.min(op, 0.06);
+    }
+    el.setAttribute("opacity", op);
+    el.setAttribute("stroke-width", touches ? l.st.w * 1.9 : l.st.w);
+
+    const showLbl = touches || (showAllLabels && !hidden);
+    tx.style.opacity = showLbl ? (touches ? 0.95 : 0.42) : 0;
+    if(showLbl){
+      const mx = (l.A.x + l.B.x)/2, my = (l.A.y + l.B.y)/2;
+      tx.setAttribute("x", mx);
+      tx.setAttribute("y", my - 4);
+    }
+  }
+}
+
+/* =========================================================
+   交互
+   ========================================================= */
+let dragging = null, panning = null, moved = false;
+
+function toWorld(ev){
+  const r = svg.getBoundingClientRect();
+  return {
+    x: (ev.clientX - r.left - view.x) / view.k,
+    y: (ev.clientY - r.top - view.y) / view.k
+  };
+}
+
+svg.addEventListener("pointerdown", ev=>{
+  const g = ev.target.closest("g[data-id]");
+  svg.setPointerCapture(ev.pointerId);
+  moved = false;
+  if(g){
+    const n = BY_ID[g.getAttribute("data-id")];
+    dragging = {n, sx:ev.clientX, sy:ev.clientY};
+  } else {
+    panning = {sx:ev.clientX, sy:ev.clientY, ox:view.x, oy:view.y};
+    svg.classList.add("dragging");
+  }
+});
+
+svg.addEventListener("pointermove", ev=>{
+  if(dragging){
+    const w = toWorld(ev);
+    if(Math.abs(ev.clientX-dragging.sx) + Math.abs(ev.clientY-dragging.sy) > 3) moved = true;
+    dragging.n.x = w.x; dragging.n.y = w.y;
+    dragging.n.vx = 0; dragging.n.vy = 0;
+    if(moved) simulate(6);
+    paint();
+  } else if(panning){
+    view.x = panning.ox + (ev.clientX - panning.sx);
+    view.y = panning.oy + (ev.clientY - panning.sy);
+    applyView();
+    if(Math.abs(ev.clientX-panning.sx)+Math.abs(ev.clientY-panning.sy) > 3) moved = true;
+  } else {
+    const g = ev.target.closest("g[data-id]");
+    const id = g ? g.getAttribute("data-id") : null;
+    const n = id ? BY_ID[id] : null;
+    if(n !== hovered){ hovered = n; refreshStyles(); }
+    svg.style.cursor = n ? "pointer" : "grab";
+  }
+});
+
+function endPointer(ev){
+  if(dragging && !moved) selectNode(dragging.n);
+  else if(dragging && moved) placeLabels();
+  dragging = null;
+  panning = null;
+  svg.classList.remove("dragging");
+  try{ svg.releasePointerCapture(ev.pointerId); }catch(e){}
+}
+svg.addEventListener("pointerup", endPointer);
+svg.addEventListener("pointercancel", ()=>{dragging=null;panning=null;svg.classList.remove("dragging")});
+svg.addEventListener("pointerleave", ()=>{ if(hovered){hovered=null; refreshStyles();} });
+
+svg.addEventListener("wheel", ev=>{
+  ev.preventDefault();
+  const r = svg.getBoundingClientRect();
+  const px = ev.clientX - r.left, py = ev.clientY - r.top;
+  const k0 = view.k;
+  const k1 = Math.max(0.16, Math.min(3.2, k0 * (ev.deltaY < 0 ? 1.12 : 1/1.12)));
+  view.x = px - (px - view.x) * (k1/k0);
+  view.y = py - (py - view.y) * (k1/k0);
+  view.k = k1;
+  applyView();
+}, {passive:false});
+
+/* =========================================================
+   详情面板
+   ========================================================= */
+let panelOpen = false;
+const panel = $("#panel"), panelBody = $("#panel-body");
+
+function selectNode(n){
+  selected = n;
+  renderPanel(n);
+  panel.classList.add("open");
+  panelOpen = true;
+  refreshStyles();
+  focusNodeCamera(n);
+}
+function focusNodeCamera(n){
+  const w = innerWidth, h = innerHeight;
+  const off = w > 900 ? 176 : 0;
+  const k = Math.max(view.k, 0.9);
+  animateTo(w/2 - off - n.x*k, h/2 - n.y*k, k);
+}
+function renderPanel(n){
+  const fac = FAC[n.f];
+  const rels = REL[n.id].slice().sort((a,b)=>{
+    const order = {kin:0, created:1, serve:2, worship:3, enemy:4, other:5};
+    return (order[a.l.r]??9) - (order[b.l.r]??9);
+  });
+  panelBody.innerHTML = `
+    <div class="p-fac" style="color:${fac.color}">
+      <span class="d"></span>${fac.name}<span style="opacity:.5">/</span>${fac.en}
+    </div>
+    <h2 class="p-name">${n.n}</h2>
+    <div class="p-en">${n.e}</div>
+    <div class="p-title">${n.t}</div>
+    <p class="p-desc">${n.d}</p>
+    <div class="p-sub">关系 · ${rels.length} 条</div>
+    <ul class="rel">
+      ${rels.map(r=>{
+        const st = r.l.st;
+        const peer = BY_ID[r.other];
+        const pf = FAC[peer.f];
+        return `<li data-id="${peer.id}">
+          <div class="rh">
+            <span class="rn" style="color:${pf.color}">${peer.n}</span>
+            <span class="rt" style="color:${st.color}">${r.l.l}</span>
+          </div>
+          <p class="rd">${r.l.d}</p>
+        </li>`;
+      }).join("")}
+    </ul>
+  `;
+  panelBody.querySelectorAll(".rel li").forEach(li=>{
+    li.addEventListener("click", ()=>{
+      const t = BY_ID[li.getAttribute("data-id")];
+      hovered = null;
+      selectNode(t);
+    });
+  });
+  panelBody.scrollTop = 0;
+}
+$("#p-close").addEventListener("click", ()=>{
+  panel.classList.remove("open");
+  panelOpen = false;
+  selected = null;
+  refreshStyles();
+});
+
+/* =========================================================
+   顶栏 / 图例 / 弹层
+   ========================================================= */
+const statsEl = $("#stats");
+const byFac = {};
+FACTIONS.forEach(f=>byFac[f.id]=0);
+N.forEach(n=>{ byFac[n.f] = (byFac[n.f]||0)+1; });
+statsEl.innerHTML = `
+  <span><b>${N.length}</b><i>位存在</i></span>
+  <span><b>${L.length}</b><i>条关系</i></span>
+  <span><b>${FACTIONS.length}</b><i>大阵营</i></span>`;
+
+const facList = $("#faclist");
+facList.innerHTML = FACTIONS.map(f=>`
+  <div class="fac" data-f="${f.id}">
+    <span class="dot" style="background:${f.color};color:${f.color}"></span>
+    <span class="nm">${f.name}</span>
+    <span class="ct">${byFac[f.id]||0}</span>
+  </div>`).join("");
+facList.querySelectorAll(".fac").forEach(el=>{
+  el.addEventListener("click", ()=>{
+    const id = el.getAttribute("data-f");
+    if(hiddenFac.has(id)) hiddenFac.delete(id); else hiddenFac.add(id);
+    el.classList.toggle("off", hiddenFac.has(id));
+    refreshStyles();
+  });
+});
+$("#btn-all").addEventListener("click", ()=>{
+  hiddenFac.clear();
+  facList.querySelectorAll(".fac").forEach(el=>el.classList.remove("off"));
+  refreshStyles();
+});
+
+/* 图例上的关系条数 */
+document.querySelectorAll(".ekey[data-r]").forEach(el=>{
+  const r = el.getAttribute("data-r");
+  const n = L.filter(l=>l.r === r).length;
+  const t = el.querySelector(".ec");
+  if(t) t.textContent = n;
+});
+
+const qi = $("#q");
+qi.addEventListener("input", ()=>{
+  query = qi.value.trim();
+  refreshStyles();
+});
+
+$("#btn-fit").addEventListener("click", ()=>fit());
+$("#btn-relayout").addEventListener("click", ()=>{
+  SEED = (Date.now() ^ (Math.random()*0xffffffff)) >>> 0;   // 换个种子，重推一张
+  seedNodes(620);
+  simulate(700);
+  placeLabels();
+  paint();
+  fit();
+});
+
+document.addEventListener("keydown", ev=>{
+  if(ev.key === "Escape"){
+    if($("#modal").classList.contains("open")) closeModal();
+    else if(panelOpen) $("#p-close").click();
+  }
+});
+
+/* 弹层 */
+const modal = $("#modal"), sheetBody = $("#sheet-body"), sheetTitle = $("#sheet-title");
+let curTab = "rel";
+function openModal(tab){
+  curTab = tab || "rel";
+  modal.classList.add("open");
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab === curTab));
+  renderSheet();
+}
+function closeModal(){ modal.classList.remove("open"); }
+$("#modal-close").addEventListener("click", closeModal);
+modal.addEventListener("click", ev=>{ if(ev.target === modal) closeModal(); });
+document.querySelectorAll(".tabs button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    curTab = b.dataset.tab;
+    document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x === b));
+    renderSheet();
+  });
+});
+$("#btn-table").addEventListener("click", ()=>openModal("rel"));
+
+function renderSheet(){
+  if(curTab === "rel"){
+    sheetTitle.textContent = "关系总表";
+    const order = ["kin","created","serve","worship","enemy","other"];
+    const rows = L.slice().sort((x,y)=>{
+      const d = x.A.n.localeCompare(y.A.n, "zh");
+      if(d) return d;
+      return x.B.n.localeCompare(y.B.n, "zh");
+    });
+    sheetBody.innerHTML = `
+      <table class="reltab">
+        <thead><tr><th style="width:270px">关系</th><th style="width:80px">类型</th><th>说明</th></tr></thead>
+        <tbody>
+        ${rows.map(l=>`
+          <tr>
+            <td class="pair" data-id="${l.a}">
+              <span style="color:${FAC[l.A.f].color}">${l.A.n}</span>
+              <span class="arrow">→</span>
+              <span style="color:${FAC[l.B.f].color}">${l.B.n}</span>
+            </td>
+            <td><span class="badge" style="color:${l.st.color}">${l.st.label}</span></td>
+            <td class="desc"><b style="color:#dbe2f7;font-weight:600">${l.l}</b> — ${l.d}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+    sheetBody.querySelectorAll(".pair").forEach(td=>{
+      td.addEventListener("click", ()=>{
+        const n = BY_ID[td.getAttribute("data-id")];
+        closeModal();
+        hovered = null;
+        selectNode(n);
+      });
+    });
+  } else {
+    sheetTitle.textContent = "阵营统计";
+    sheetBody.innerHTML = `
+      <div class="facgrid">
+        ${FACTIONS.map(f=>{
+          const mem = N.filter(n=>n.f === f.id).sort((a,b)=>b.s-a.s);
+          const relCount = L.filter(l=>l.A.f===f.id||l.B.f===f.id).length;
+          return `<div class="faccard">
+            <div class="fh">
+              <span class="dot" style="background:${f.color};color:${f.color}"></span>
+              <b style="color:${f.color}">${f.name}</b>
+              <span>${mem.length} 位 · ${relCount} 条关系</span>
+            </div>
+            <div class="fd">${f.desc}</div>
+            <div class="members">
+              ${mem.map(n=>`<button data-id="${n.id}" style="border-color:${f.color}33">${n.n}</button>`).join("")}
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`;
+    sheetBody.querySelectorAll(".members button").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        const n = BY_ID[b.getAttribute("data-id")];
+        closeModal();
+        hovered = null;
+        selectNode(n);
+      });
+    });
+  }
+}
+
+/* =========================================================
+   启动
+   ========================================================= */
+function boot(){
+  drawSky();
+  seedNodes(520);
+  simulate(900);
+  placeLabels();
+  paint();
+  fit();
+  setTimeout(()=>{ const h = $("#hint"); if(h) h.style.opacity = 0; }, 7000);
+}
+window.addEventListener("resize", ()=>{ drawSky(); });
+boot();
+</script>
+</body>
+</html>
