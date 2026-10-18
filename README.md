@@ -2,11 +2,14 @@
 
 一张可交互的克苏鲁神话人物关系星图：72 个实体、96 条关系，按 6 大阵营聚成星区，每个实体都有一句介绍，每条关系都标了类型、叫法和一句说明。
 
+**[→ 在线打开](https://54nanmiao.github.io/cthulhu-mythos-starmap/)** · 单文件 · 零依赖 · 不需要联网
+
 ![预览](preview.png)
 
-## 直接打开
+## 打开方式
 
-双击 `index.html` 即可。单文件、零依赖、不需要联网 —— 没有外部字体、没有 CDN、没有任何脚本请求。
+- **在线**：https://54nanmiao.github.io/cthulhu-mythos-starmap/
+- **离线**：双击仓库里的 `index.html` 即可。单文件、零依赖 —— 没有外部字体、没有 CDN、没有任何脚本请求。
 
 ## 功能
 
