@@ -63,4 +63,7 @@
 
 ## License
 
+- **代码与页面**：MIT，见 [LICENSE](LICENSE)。
+- **文字整理**（人物介绍与关系说明）：[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh)。
+
 代码与页面：MIT。文字整理部分建议按 CC BY 4.0 使用。
